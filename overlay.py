@@ -5,7 +5,7 @@ import numpy as np
 class overlay:
     def __init__(self, capture):
         self.vcap = capture
-        self.model = YOLO('yolov8n-seg.pt')  # load a pretrained model (recommended for training)
+        self.model = YOLO('yolov8n-seg.pt')
     #all of the following methods expect frame data to be in RGB color space (not grayscale)
     def getBBOX(self, frame): #returns a numpy array of every bounding box in xyxy
         #get frame results
@@ -33,26 +33,26 @@ class overlay:
             y1 = int(bboxes[i][1])
             x2 = int(bboxes[i][2])
             y2 = int(bboxes[i][3])
-            print(x1, x2, y1, y2)
             if x1 >= x2 or y1 >= y2: continue #broken bboxes sometimes pop up
             #debug bbox show
             if show_boxes: cv2.rectangle(outlines, (x1, y1), (x2, y2), (255, 255, 255), 2)
             #edge detection
-            fslice = frame[y1:y2][x1:x2]
-            if fslice is None: continue
+            fslice = frame[y1:y2, x1:x2]
+            if fslice is None or fslice.size == 0: continue
             #automatically determine coefficients for canny edge detection depending on image parameters
-            med_val = np.nanmedian(fslice)
+            bfslice = cv2.blur(fslice, ksize=(5,5))
+            med_val = np.nanmedian(bfslice)
             t1 = int(max(0, 0.7*med_val))
             t2 = int(min(255, 1.3*med_val))
-            sp_gray = cv2.Canny(fslice, t1, t2)
-            if sp_gray is None: continue
-            slice_processed = cv2.cvtColor(sp_gray, cv2.COLOR_GRAY2RGB)
+            g_processed = cv2.Canny(fslice, t1, t2, L2gradient=True)
+            if g_processed is None: continue
             #integrates into the main outline frame
-            outlines_slice = outlines[y1:y2][x1:x2] #equivalent slice from current outlines
-            maxi_slice = np.maximum(outlines_slice, slice_processed)
-            outlines[y1:y2][x1:x2] = maxi_slice
+            outlines_slice = outlines[y1:y2, x1:x2] #equivalent slice from current outlines
+            g_outlines_slice = cv2.cvtColor(outlines_slice, cv2.COLOR_BGR2GRAY)
+            g_comb_slice = np.maximum(g_outlines_slice, g_processed)
+            outlines[y1:y2, x1:x2] = cv2.cvtColor(g_comb_slice, cv2.COLOR_GRAY2BGR)
         return outlines
-    def composite(self, bframe, oframe, t=50): #composites the overlay (expected to be in grayscale but in RGB color space)
+    def composite(self, bframe, oframe, t=128): #composites the overlay (expected to be in grayscale but in RGB color space)
         #over the base frame, choosing high contrast colors as necessary
         #(threshold is for adjusting which intensity the overlay image has to be before it gets shown)
         for i in range(bframe.shape[0]):
@@ -71,8 +71,11 @@ class overlay:
 
 #TEST CODE
 vtest = cv2.VideoCapture(0)
+vtest.set(3, 640)
+vtest.set(4, 480)
 otest = overlay(vtest)
 while(True):
     ret, frame = vtest.read()
-    if ret: cv2.imshow("Test", otest.composite(frame, otest.edgedetect(frame, otest.getBBOX(frame))))
+    if ret:
+        cv2.imshow("Test", otest.composite(frame, otest.edgedetect(frame, otest.getBBOX(frame), show_boxes=False)))
     cv2.waitKey(1)
