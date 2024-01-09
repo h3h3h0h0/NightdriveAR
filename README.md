@@ -1,2 +1,3 @@
-#Night Drive Augmented Reality
+# Night Drive Augmented Reality
+
 The end design goal of this project is to have an overlay to assist with identifying road hazards especially in the presence of fog and oncoming headlights. The idea is to use a FLIR imaging system and a segmentation model to identify potential objects, then highlighting them on a parallel normal camera with an overlay. One implementation that's possible for the overlay is edge detection, since it enables the user to see through the overlay yet conveys the shape of the object. Currently, the software can perform the detection and overlay generation, but was only tested on videos shot on a normal dashcam. 
