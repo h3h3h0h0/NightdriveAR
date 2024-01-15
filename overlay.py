@@ -3,9 +3,19 @@ import cv2
 import numpy as np
 
 class overlay:
-    def __init__(self, capture):
-        self.vcap = capture
+    def __init__(self, base, over):
+        self.vbase = base
+        self.vover = over
         self.model = YOLO('yolov8n-seg.pt')
+    def run(self, boxes=False, t=128):
+        while (True):
+            ret1, bframe = self.vbase.read
+            ret2, oframe = self.vover.read
+            if ret1 and ret2:
+                cv2.imshow("Test",
+                           otest.composite(bframe, otest.edgedetect(oframe, otest.getBBOX(oframe), show_boxes=boxes), t))
+            cv2.waitKey(1)
+
     #all of the following methods expect frame data to be in RGB color space (not grayscale)
     def getBBOX(self, frame): #returns a numpy array of every bounding box in xyxy
         #get frame results
@@ -73,9 +83,5 @@ class overlay:
 vtest = cv2.VideoCapture(0)
 vtest.set(3, 640)
 vtest.set(4, 480)
-otest = overlay(vtest)
-while(True):
-    ret, frame = vtest.read()
-    if ret:
-        cv2.imshow("Test", otest.composite(frame, otest.edgedetect(frame, otest.getBBOX(frame), show_boxes=False)))
-    cv2.waitKey(1)
+otest = overlay(vtest, vtest)
+otest.run()
